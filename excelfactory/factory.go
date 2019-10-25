@@ -12,9 +12,9 @@ type File struct {
 
 // Sheet wraps excelize.Sheet in a convenient struct
 type Sheet struct {
-	rows       [][]string
-	Name       string
-	MaxCol     int
-	MaxRow     int
-	HeaderCols map[string]string
+	data          [][]string
+	Name          string
+	MaxCol        int
+	MaxRow        int
+	HeaderColumns map[string]string
 }

@@ -18,7 +18,7 @@ func ReadFile(path string) (File, error) {
 	for _, sheetname := range f.GetSheetMap() {
 		names = append(names, sheetname)
 		sheet := Sheet{
-			HeaderCols: map[string]string{},
+			HeaderColumns: map[string]string{},
 		}
 		sheet.Name = sheetname
 
@@ -26,7 +26,7 @@ func ReadFile(path string) (File, error) {
 		if err != nil {
 			return file, err
 		}
-		sheet.rows = rows
+		sheet.data = rows
 
 		for row, rowCells := range rows {
 			sheet.MaxRow = len(rows)
@@ -37,13 +37,12 @@ func ReadFile(path string) (File, error) {
 				}
 				// set columns
 				if row == 0 {
-					sheet.HeaderCols[currentCoords] = cell
+					sheet.HeaderColumns[currentCoords] = cell
 				}
 				// set MaxCol if it's longer than before
 				if sheet.MaxCol < len(rowCells) {
 					sheet.MaxCol = len(rowCells)
 				}
-
 			}
 		}
 
@@ -83,7 +82,7 @@ func (sheet *Sheet) FilterRowsByColumn(column string, filter Filterfunc) ([][]st
 		return values, err
 	}
 
-	for row, cells := range sheet.rows {
+	for row, cells := range sheet.data {
 		//skip header col and check if column exists
 		if row == 0 {
 			if colnr > len(cells) {
