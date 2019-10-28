@@ -13,6 +13,7 @@ func ReadFile(path string) (File, error) {
 		return file, err
 	}
 	file.file = f
+	file.path = path
 
 	names := make([]string, f.SheetCount)
 	for _, sheetname := range f.GetSheetMap() {
