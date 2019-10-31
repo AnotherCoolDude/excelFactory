@@ -59,7 +59,7 @@ func (file *File) Save() error {
 		// fill sheet with data
 		for rowIdx, row := range sh.data {
 			for colIdx, cell := range row {
-				coords, err := excelize.CoordinatesToCellName(rowIdx+1, colIdx+1)
+				coords, err := excelize.CoordinatesToCellName(colIdx+1, rowIdx+1)
 				if err != nil {
 					return err
 				}

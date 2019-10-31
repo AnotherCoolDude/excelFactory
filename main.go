@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/AnotherCoolDude/excelFactory/etats"
 	"github.com/AnotherCoolDude/excelFactory/excelfactory"
 	"strconv"
 )
@@ -16,6 +17,16 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	e, err := etats.ReadFile("../etats/etatdirector.json")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	for _, d := range e.Directors {
+
+	}
+
 	rows, err := f.Sheets[0].FilterRowsByColumn("B", func(value string) bool {
 		return value == "ABCH"
 	})

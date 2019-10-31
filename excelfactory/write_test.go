@@ -1,6 +1,7 @@
 package excelfactory
 
 import (
+	"github.com/360EntSecGroup-Skylar/excelize"
 	"os"
 	"testing"
 )
@@ -17,7 +18,7 @@ func TestWrite(t *testing.T) {
 
 	dd2 := [][]string{
 		[]string{"Value 1", " Value 2", "Value 3", "Value 4"},
-		[]string{"Value 3", "Value 4", "Value 5", "Value 6"},
+		[]string{"Value 5", "Value 6", "Value 7", "Value 8"},
 	}
 
 	nf.Sheets[0].AppendData(dd1)
@@ -39,11 +40,11 @@ func TestWrite(t *testing.T) {
 		t.Error("no data was saved to file")
 	}
 
-	for _, row := range f.Sheets[0].data {
-		for _, cell := range row {
-			t.Logf("%s\t", cell)
+	for rowIdx, row := range f.Sheets[0].data {
+		for colIdx, cell := range row {
+			coords, _ := excelize.CoordinatesToCellName(colIdx+1, rowIdx+1)
+			t.Logf("[%s] %s", coords, cell)
 		}
-		t.Log()
 	}
 
 	err = os.Remove(path)

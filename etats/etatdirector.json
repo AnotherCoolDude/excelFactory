@@ -1,0 +1,105 @@
+{
+    "Directors": [{
+            "Name": "Martin Mehler",
+            "Campaigns": [
+                "APHP",
+                "APRA",
+                "APMI",
+                "APSS",
+                "APOT",
+                "APAL",
+                "AISP",
+                "AIJI",
+                "ADCO",
+                "ACCO",
+                "ADIM",
+                "BVNE",
+                "BVST",
+                "BVKJ",
+                "BVRA",
+                "BVKO",
+                "BVJI",
+                "BAAC",
+                "BVVI",
+                "CHFH",
+                "CHFO",
+                "CHTR",
+                "EIZO",
+                "KEDE",
+                "KEFU",
+                "KEID",
+                "KEMU",
+                "KEPA",
+                "KESI",
+                "KEVI",
+                "MDDO",
+                "SAVI",
+                "CPIM",
+                "SPMO",
+                "STEF",
+                "DEEP"
+            ]
+        },
+        {
+            "Name": "Nadja Fischel",
+            "Campaigns": [
+                "BVDA",
+                "GDED",
+                "DGSM",
+                "KKNL",
+                "KKCR",
+                "PFAT",
+                "PIFA",
+                "PIMA",
+                "KKPO",
+                "KKCO",
+                "KKAT",
+                "SDBU",
+                "NEVI",
+                "KKMO",
+                "SOBI"
+            ]
+        },
+        {
+            "Name": "Susanne Schoess",
+            "Campaigns": [
+                "ABDU",
+                "ABGP",
+                "ABIM",
+                "ABHU",
+                "ABCH",
+                "REGU",
+                "ROCO"
+            ]
+        },
+        {
+            "Name": "Thomas Herchenhan",
+            "Campaigns": [
+                "BAEY",
+                "BVEY",
+                "BVVV",
+                "EXPO",
+                "EXVE",
+                "MUBI",
+                "MUSU",
+                "MUHE",
+                "MUME",
+                "MUNY",
+                "MUPE",
+                "MUPL",
+                "MURE",
+                "MUTR",
+                "MUZU",
+                "MEAR",
+                "MEDO",
+                "ROOC",
+                "TIAS",
+                "TIEN",
+                "TIPO",
+                "NECA",
+                "NEME",
+                "KMDS"
+            ]
+        }
+    ]
+}
