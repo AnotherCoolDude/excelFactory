@@ -1,7 +1,10 @@
 package excelfactory
 
 import (
+	"fmt"
 	"github.com/360EntSecGroup-Skylar/excelize"
+	"strconv"
+	"strings"
 )
 
 // New creates a new File
@@ -63,12 +66,34 @@ func (file *File) Save() error {
 				if err != nil {
 					return err
 				}
-				err = file.file.SetCellStr(sheetname, coords, cell)
+				// try to parse to float
+				f, err := strconv.ParseFloat(cell, 64)
+				if err != nil {
+					// if parsing fails, write as string
+					err = file.file.SetCellStr(sheetname, coords, cell)
+				} else {
+					// if parsing succeeds, write as float
+					err = file.file.SetCellFloat(sh.Name, coords, f, 2, 64)
+				}
 				if err != nil {
 					return err
 				}
 			}
 		}
+
+		// format data
+		for _, finfo := range sh.finfo {
+			sID, err := file.file.NewStyle(finfo.format)
+			if err != nil {
+				return fmt.Errorf("could not parse format %s: %s", finfo.format, err)
+			}
+			splitArea := strings.Split(finfo.area, ":")
+			err = file.file.SetCellStyle(sh.Name, splitArea[0], splitArea[1], sID)
+			if err != nil {
+				return fmt.Errorf("could not set columnstyle: %s", err)
+			}
+		}
+
 	}
 	return file.file.SaveAs(file.path)
 }

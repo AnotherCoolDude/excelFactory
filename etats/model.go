@@ -1,4 +1,4 @@
-package json
+package etats
 
 // Etats wraps a etat director in a struct
 type Etats struct {
