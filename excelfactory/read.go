@@ -6,14 +6,14 @@ import (
 )
 
 // ReadFile reads an excel file at path and prepares it
-func ReadFile(path string) (File, error) {
+func ReadFile(path string, header bool) (File, error) {
 	file := File{}
 	f, err := excelize.OpenFile(path)
 	if err != nil {
 		return file, err
 	}
 	file.file = f
-	file.path = path
+	file.Path = path
 
 	names := make([]string, f.SheetCount)
 	for _, sheetname := range f.GetSheetMap() {
@@ -27,23 +27,26 @@ func ReadFile(path string) (File, error) {
 		if err != nil {
 			return file, err
 		}
-		sheet.data = rows
 
-		for row, rowCells := range rows {
-			sheet.MaxRow = len(rows)
-			for col, cell := range rowCells {
-				currentCoords, err := excelize.CoordinatesToCellName(col+1, row+1)
+		if header {
+			for col, cell := range rows[0] {
+				colname, err := excelize.ColumnNumberToName(col + 1)
 				if err != nil {
 					return file, err
 				}
-				// set columns
-				if row == 0 {
-					sheet.HeaderColumns[currentCoords] = cell
-				}
-				// set MaxCol if it's longer than before
-				if sheet.MaxCol < len(rowCells) {
-					sheet.MaxCol = len(rowCells)
-				}
+				sheet.HeaderColumns[colname] = cell
+			}
+			sheet.data = rows[1:]
+		} else {
+			sheet.data = rows
+		}
+
+		for _, rowCells := range sheet.data {
+			sheet.MaxRow = len(sheet.data)
+
+			// set MaxCol if it's longer than before
+			if sheet.MaxCol < len(rowCells) {
+				sheet.MaxCol = len(rowCells)
 			}
 		}
 
@@ -83,16 +86,13 @@ func (sheet *Sheet) FilterRowsByColumn(column string, filter Filterfunc) ([][]st
 		return values, err
 	}
 
-	for row, cells := range sheet.data {
-		//skip header col and check if column exists
-		if row == 0 {
-			if colnr > len(cells) {
-				return values, fmt.Errorf("column %s out of bounds", column)
-			}
-			continue
-		}
+	// check if column exists
+	if len(sheet.data[0]) < colnr {
+		return values, fmt.Errorf("column %s out of bounds", column)
+	}
 
-		for col, cell := range cells {
+	for _, row := range sheet.data {
+		for col, cell := range row {
 			// find column to filter
 			if col+1 != colnr {
 				continue
@@ -101,7 +101,7 @@ func (sheet *Sheet) FilterRowsByColumn(column string, filter Filterfunc) ([][]st
 			if !filter(cell) {
 				continue
 			}
-			values = append(values, cells)
+			values = append(values, row)
 		}
 	}
 	return values, nil

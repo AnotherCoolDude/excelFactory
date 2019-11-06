@@ -30,7 +30,7 @@ func TestWrite(t *testing.T) {
 		return
 	}
 
-	f, err := ReadFile(path)
+	f, err := ReadFile(path, true)
 	if err != nil {
 		t.Errorf("could not open file, got error: %s", err)
 		return

@@ -11,7 +11,7 @@ import (
 func New(path string) *File {
 	f := excelize.NewFile()
 	return &File{
-		path: path,
+		Path: path,
 		file: f,
 		Sheets: []Sheet{
 			Sheet{
@@ -59,10 +59,26 @@ func (file *File) Save() error {
 			sheetname = sh.Name
 		}
 
+		// define modifier to calculate coordinates
+		rowModifier := 1
+		colModifier := 1
+
+		// check if sheet has header defined, write header row to file and adjust modifier
+		if len(sh.HeaderColumns) != 0 {
+			for col, hname := range sh.HeaderColumns {
+				err := file.file.SetCellStr(sh.Name, fmt.Sprintf("%s%d", col, 1), hname)
+				if err != nil {
+					return err
+				}
+			}
+			rowModifier++
+		}
+
 		// fill sheet with data
 		for rowIdx, row := range sh.data {
+
 			for colIdx, cell := range row {
-				coords, err := excelize.CoordinatesToCellName(colIdx+1, rowIdx+1)
+				coords, err := excelize.CoordinatesToCellName(colIdx+colModifier, rowIdx+rowModifier)
 				if err != nil {
 					return err
 				}
@@ -95,11 +111,11 @@ func (file *File) Save() error {
 		}
 
 	}
-	return file.file.SaveAs(file.path)
+	return file.file.SaveAs(file.Path)
 }
 
 // SaveAs saves file at path
 func (file *File) SaveAs(path string) error {
-	file.path = path
+	file.Path = path
 	return file.Save()
 }

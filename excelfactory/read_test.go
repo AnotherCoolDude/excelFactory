@@ -11,7 +11,7 @@ const (
 func TestRead(t *testing.T) {
 	testFilterValue := "AIJI"
 
-	file, err := ReadFile(filepath)
+	file, err := ReadFile(filepath, true)
 	if err != nil {
 		t.Errorf("got error %s", err)
 	}

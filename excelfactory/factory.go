@@ -8,7 +8,7 @@ import (
 
 // File wraps excelize.File in a convenient struct
 type File struct {
-	path   string
+	Path   string
 	file   *excelize.File
 	Sheets []Sheet
 }

@@ -24,7 +24,9 @@
                 "CHFH",
                 "CHFO",
                 "CHTR",
+                "EIIN",
                 "EIZO",
+                "JEIM",
                 "KEDE",
                 "KEFU",
                 "KEID",
@@ -37,7 +39,9 @@
                 "CPIM",
                 "SPMO",
                 "STEF",
-                "DEEP"
+                "DEEP",
+                "UPSP",
+                "UPJI"
             ]
         },
         {
@@ -49,6 +53,8 @@
                 "KKNL",
                 "KKCR",
                 "PFAT",
+                "PFCH",
+                "PICR",
                 "PIFA",
                 "PIMA",
                 "KKPO",
@@ -75,6 +81,7 @@
         {
             "Name": "Thomas Herchenhan",
             "Campaigns": [
+                "ALPH",
                 "BAEY",
                 "BVEY",
                 "BVVV",
@@ -92,13 +99,25 @@
                 "MUZU",
                 "MEAR",
                 "MEDO",
+                "NENA",
                 "ROOC",
+                "SHAP",
                 "TIAS",
                 "TIEN",
                 "TIPO",
                 "NECA",
                 "NEME",
                 "KMDS"
+            ]
+        },
+        {
+            "Name":"Ursula Schmitz",
+            "Campaigns":[
+                "BRIM",
+                "CZRB",
+                "FLPZ",
+                "HFIM",
+                "MKIM"
             ]
         }
     ]
