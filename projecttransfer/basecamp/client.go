@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/basecamp/models"
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/helper"
+	"github.com/joho/godotenv"
 	"strconv"
 
 	"github.com/rs/xid"
@@ -84,12 +85,13 @@ func (c *Client) CacheAuth() error {
 		return fmt.Errorf("could not cache basecamp auth: code or id empty")
 	}
 
-	var err error
-	err = os.Setenv("BASECAMP_ID", strconv.Itoa(c.id))
+	currentEnv, err := godotenv.Read()
 	if err != nil {
 		return err
 	}
-	os.Setenv("BASECAMP_CODE", c.code)
+	currentEnv["BASECAMP_CODE"] = c.code
+	currentEnv["BASECAMP_ID"] = strconv.Itoa(c.id)
+	err = godotenv.Write(currentEnv, ".env")
 	if err != nil {
 		return err
 	}
