@@ -14,6 +14,7 @@ func main() {
 
 	app.Commands = []cli.Command{
 		orderbookCommand,
+		transferCommand,
 	}
 
 	err := app.Run(os.Args)

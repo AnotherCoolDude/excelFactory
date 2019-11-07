@@ -142,7 +142,7 @@ func obTask(rentpath, jsonpath string, header bool) {
 	newFile.Sheets[0].FormatColumns("D", excelfactory.FormatEuro)
 
 	// check if all camps in excel file where read
-	rows, err := f.Sheets[0].FilterColumn("B", func(value string) bool {
+	rows, err := f.Sheets[0].FilterRowsByColumn("B", func(value string) bool {
 		existing := false
 		for _, d := range e.Directors {
 			for _, c := range d.Campaigns {
@@ -158,9 +158,10 @@ func obTask(rentpath, jsonpath string, header bool) {
 		fmt.Printf("error filtering excel file: %s\n", err)
 		os.Exit(1)
 	}
-	uRows := unique(rows)
-	for _, cell := range uRows {
-		fmt.Printf("campaign %s from file %s was not used\n", cell, path.Base(rentpath))
+
+	for _, row := range rows {
+		fmt.Printf("campaign %s from file %s was not used\n", row[1], path.Base(rentpath))
+		newFile.Sheets[0].AppendData([][]string{{"Unbekannt", row[1], row[11]}})
 	}
 
 	// save file
