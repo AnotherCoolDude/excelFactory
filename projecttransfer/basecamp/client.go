@@ -7,7 +7,9 @@ import (
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/basecamp/models"
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/helper"
 	"github.com/joho/godotenv"
+	"github.com/pkg/browser"
 	"strconv"
+	"time"
 
 	"github.com/rs/xid"
 	"golang.org/x/oauth2"
@@ -18,6 +20,10 @@ import (
 	"os"
 	"path"
 	"sync"
+)
+
+var (
+	wg sync.WaitGroup
 )
 
 // Client represents a client which communicates with basecamp
@@ -56,59 +62,97 @@ func DefaultClient() *Client {
 	}
 }
 
-// CachedAuth attempts to load a token from os.Env "BASECAMP_CODE" and id from os.Env "BASECAMP_ID"
-func (c *Client) CachedAuth() error {
-	code := os.Getenv("BASECAMP_CODE")
-	id := os.Getenv("BASECAMP_ID")
-	if code == "" || id == "" {
-		return fmt.Errorf("env variables are empty")
-	}
-	t, err := c.oauthConfig.Exchange(oauth2.NoContext, code, oauth2.SetAuthURLParam("type", "web_server"))
+// Authenticate handles the whole process of oauth2.0 authentication for basecamp
+func (c *Client) Authenticate() error {
+	err := c.cachedAuth()
 	if err != nil {
-		return err
+		fmt.Printf("cached token unavailable: %s\nredirecting to authenticate", err)
+	} else {
+		fmt.Println("using cached token")
+		return nil
 	}
-	if !t.Valid() {
-		return fmt.Errorf("cashed token has expired")
-	}
-	c.token = t
-	idnr, err := strconv.Atoi(id)
+	// start server
+	wg.Add(1)
+	server := &http.Server{Addr: ":3000"}
+	go server.ListenAndServe()
+	// register callback route
+	http.HandleFunc(c.oauthConfig.RedirectURL, func(w http.ResponseWriter, r *http.Request) {
+		err := c.processCallback(r)
+		if err != nil {
+			fmt.Printf("error processing callback from basecamp: %s", err)
+			os.Exit(1)
+		}
+		wg.Done()
+		err = c.cacheAuth()
+		if err != nil {
+			fmt.Printf("could not cache callback: %s\n", err)
+		}
+		fmt.Println("successfully received callback")
+	})
+	// open browser for authentication
+	err = browser.OpenURL(c.authCodeURL())
 	if err != nil {
-		return fmt.Errorf("error parsing id into int")
+		fmt.Printf("could not open browser for authentication: %s", err)
+		os.Exit(1)
 	}
-	c.id = idnr
+	// wait for user to interact
+	wg.Wait()
+	server.Close()
 	return nil
 }
 
-// CacheAuth caches relevant infos in environment variables for convenience
-func (c *Client) CacheAuth() error {
-	if c.code == "" || c.id == 0 {
-		return fmt.Errorf("could not cache basecamp auth: code or id empty")
-	}
-
-	currentEnv, err := godotenv.Read()
+// FetchTodos gets todos from basecamp
+func (c *Client) FetchTodos(project *models.Project) error {
+	setresp, err := c.Do("GET", project.Dock[2].URL, http.NoBody, helper.Query{})
 	if err != nil {
 		return err
 	}
-	currentEnv["BASECAMP_CODE"] = c.code
-	currentEnv["BASECAMP_ID"] = strconv.Itoa(c.id)
-	err = godotenv.Write(currentEnv, ".env")
+	var set models.Todoset
+	err = unmarshal(setresp, &set)
 	if err != nil {
 		return err
 	}
+	if set.TodolistsCount == 0 {
+		return nil
+	}
+	listresp, err := c.Do("GET", set.TodolistsURL, http.NoBody, helper.Query{})
+	if err != nil {
+		return err
+	}
+	var lists []models.Todolist
+	err = unmarshal(listresp, &lists)
+	if err != nil {
+		return err
+	}
+	todos := []models.Todo{}
+	for _, l := range lists {
+		todoresp, err := c.Do("GET", l.TodosURL, http.NoBody, helper.Query{"completed": "false"})
+		if err != nil {
+			return err
+		}
+		var tt []models.Todo
+		err = unmarshal(todoresp, &tt)
+		if err != nil {
+			return err
+		}
+		todos = append(todos, tt...)
+	}
+	project.Todos = todos
 	return nil
 }
 
-// Unmarshal sends a request and returns the unmarshalled response
-func (c *Client) Unmarshal(URL string, query map[string]string, model interface{}) error {
-	resp, err := c.Do("GET", URL, http.NoBody, query)
+// FetchProjects returns all basecamp projects the user has access to
+func (c *Client) FetchProjects() ([]models.Project, error) {
+	// get projects from basecamp
+	var pp []models.Project
+
+	// fetch basecampprojects
+	err := c.unmarshalRequest("/projects.json", helper.Query{}, &pp)
 	if err != nil {
-		return err
+		fmt.Printf("error unmarshalling basecamp projects: %s\n", err)
+		return pp, err
 	}
-	err = unmarshal(resp, &model)
-	if err != nil {
-		return err
-	}
-	return nil
+	return pp, nil
 }
 
 // Do creates and sends a request
@@ -141,27 +185,71 @@ func (c *Client) Do(method, URL string, body io.Reader, query map[string]string)
 	return resp, nil
 }
 
-// baseURL returnes the base of every request for basecamp api
-func (c *Client) baseURL() *url.URL {
-	urlString := fmt.Sprintf("https://3.basecampapi.com/%d/", c.id)
-	url, _ := url.Parse(urlString)
-	return url
+// Unmarshal sends a request and returns the unmarshalled response
+func (c *Client) unmarshalRequest(URL string, query map[string]string, model interface{}) error {
+	resp, err := c.Do("GET", URL, http.NoBody, query)
+	if err != nil {
+		return err
+	}
+	err = unmarshal(resp, &model)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-// addHeader modifies the header of request to be accepted by basecamp
-func (c *Client) addHeader(request *http.Request) {
-	request.Header.Add("Authorization", "Bearer "+c.token.AccessToken)
-	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("User-Agent", fmt.Sprintf("%s (%s)", c.appName, c.email))
+// CachedAuth attempts to load a token from .env and checks wether its expired
+func (c *Client) cachedAuth() error {
+	token := os.Getenv("BASECAMP_TOKEN")
+	id := os.Getenv("BASECAMP_ID")
+	expiry := os.Getenv("BASECAMP_EXPIRE")
+	if token == "" || id == "" {
+		return fmt.Errorf("env variables are empty")
+	}
+	expireDate, err := time.Parse(time.RFC3339, expiry)
+	if err != nil {
+		return err
+	}
+	t := oauth2.Token{AccessToken: token, Expiry: expireDate}
+	if !t.Valid() {
+		return fmt.Errorf("cached accesstoken has expired")
+	}
+	c.token = &t
+	idnr, err := strconv.Atoi(id)
+	if err != nil {
+		return fmt.Errorf("error parsing id into int")
+	}
+	c.id = idnr
+	return nil
+}
+
+// CacheAuth caches relevant infos in environment variables for convenience
+func (c *Client) cacheAuth() error {
+	if c.code == "" || c.id == 0 {
+		return fmt.Errorf("could not cache basecamp auth: code or id empty")
+	}
+
+	currentEnv, err := godotenv.Read()
+	if err != nil {
+		return err
+	}
+	currentEnv["BASECAMP_TOKEN"] = c.token.AccessToken
+	currentEnv["BASECAMP_ID"] = strconv.Itoa(c.id)
+	currentEnv["BASECAMP_EXPIRE"] = c.token.Expiry.Format(time.RFC3339)
+	err = godotenv.Write(currentEnv, ".env")
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // AuthCodeURL returns the url where the client needs to authenticate
-func (c *Client) AuthCodeURL() string {
+func (c *Client) authCodeURL() string {
 	return c.oauthConfig.AuthCodeURL(c.state, oauth2.SetAuthURLParam("type", "web_server"))
 }
 
-// HandleCallback processes callback from basecamp (and fetches the ID)
-func (c *Client) HandleCallback(request *http.Request) error {
+// processCallback processes callback from basecamp (and fetches the ID)
+func (c *Client) processCallback(request *http.Request) error {
 	code := request.FormValue("code")
 	state := request.FormValue("state")
 	if state != c.state {
@@ -180,15 +268,18 @@ func (c *Client) HandleCallback(request *http.Request) error {
 	return nil
 }
 
-// IsValid returns wether the the basecamp client has a valid token
-func (c *Client) IsValid() bool {
-	if !c.token.Valid() {
-		return false
-	}
-	if c.id == 0 {
-		return false
-	}
-	return true
+// baseURL returnes the base of every request for basecamp api
+func (c *Client) baseURL() *url.URL {
+	urlString := fmt.Sprintf("https://3.basecampapi.com/%d/", c.id)
+	url, _ := url.Parse(urlString)
+	return url
+}
+
+// addHeader modifies the header of request to be accepted by basecamp
+func (c *Client) addHeader(request *http.Request) {
+	request.Header.Add("Authorization", "Bearer "+c.token.AccessToken)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("User-Agent", fmt.Sprintf("%s (%s)", c.appName, c.email))
 }
 
 // receiveID makes a request to basecamp and extracts the ID from the response. The ID is required for further requests
@@ -208,48 +299,14 @@ func (c *Client) receiveID() error {
 	var result map[string]interface{}
 	json.Unmarshal(respbytes, &result)
 	accounts := result["accounts"].([]interface{})
+	expires := result["expires_at"].(string)
+	expireDate, err := time.Parse(time.RFC3339, expires)
+	if err != nil {
+		return fmt.Errorf("could not parse expire date: %s", err)
+	}
+	c.token.Expiry = expireDate
 	accDetails := accounts[0].(map[string]interface{})
 	c.id = int(accDetails["id"].(float64))
-	return nil
-}
-
-// FetchTodos gets todos from basecamp
-func (c *Client) FetchTodos(project *models.Project) error {
-	setresp, err := c.Do("GET", project.Dock[2].URL, http.NoBody, helper.Query{})
-	if err != nil {
-		return err
-	}
-	var set models.Todoset
-	err = unmarshal(setresp, &set)
-	if err != nil {
-		return err
-	}
-	if set.TodolistsCount == 0 {
-		return nil
-	}
-	listresp, err := c.Do("GET", set.TodolistsURL, http.NoBody, helper.Query{})
-	if err != nil {
-		return err
-	}
-	var lists []models.Todolist
-	err = unmarshal(listresp, &lists)
-	if err != nil {
-		return err
-	}
-	todos := []models.Todo{}
-	for _, l := range lists {
-		todoresp, err := c.Do("GET", l.TodosURL, http.NoBody, helper.Query{})
-		if err != nil {
-			return err
-		}
-		var tt []models.Todo
-		err = unmarshal(todoresp, &tt)
-		if err != nil {
-			return err
-		}
-		todos = append(todos, tt...)
-	}
-	project.Todos = todos
 	return nil
 }
 

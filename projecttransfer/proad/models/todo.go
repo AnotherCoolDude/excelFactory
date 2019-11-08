@@ -9,6 +9,8 @@ type Todo struct {
 	Urno             int         `json:"urno"`
 	Company          Company     `json:"company"`
 	Project          *Project    `json:"project"`
+	ProjectUrno      int         `json:"urno_project"`
+	ManagerUrno      int         `json:"urno_manager"`
 	ServiceCode      ServiceCode `json:"service_code"`
 	Responsible      Responsible `json:"responsible"`
 	Manager          Manager     `json:"manager"`

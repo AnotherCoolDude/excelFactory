@@ -1,8 +1,10 @@
 package proad
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/helper"
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/proad/models"
 	"io"
@@ -16,13 +18,15 @@ import (
 
 // Client represents a client which communicates with proad
 type Client struct {
-	httpClient *http.Client
-	apiKey     string
+	httpClient  *http.Client
+	apiKey      string
+	ManagerUrno int
+	Employees   map[string]int
 }
 
 // DefaultClient returns a default client for basecamp
 func DefaultClient() *Client {
-	return &Client{
+	c := &Client{
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -32,6 +36,18 @@ func DefaultClient() *Client {
 		},
 		apiKey: os.Getenv("PROAD_APIKEY"),
 	}
+	u, err := c.managerUrno()
+	if err != nil {
+		fmt.Printf("could not retrieve manager urno: %s\n", err)
+	}
+	c.ManagerUrno = u
+
+	ee, err := c.fetchEmployees()
+	if err != nil {
+		fmt.Printf("could not retrieve employees: %s\n", err)
+	}
+	c.Employees = ee
+	return c
 }
 
 // Do creates and sends a request
@@ -60,6 +76,79 @@ func (c *Client) Do(method, URL string, body io.Reader, query map[string]string)
 		return nil, err
 	}
 	return resp, nil
+}
+
+// ManagerUrno returns the urno of this clients user
+func (c *Client) managerUrno() (int, error) {
+	resp, err := c.Do("GET", "/me", http.NoBody, helper.Query{})
+	if err != nil {
+		return 0, err
+	}
+	var Manager struct {
+		Urno     int    `json:"urno"`
+		Endpoint string `json:"endpoint"`
+	}
+	bb, err := helper.ResponseBytes(resp)
+	if err != nil {
+		return 0, err
+	}
+	err = json.Unmarshal(bb, &Manager)
+	if err != nil {
+		return 0, err
+	}
+	return Manager.Urno, nil
+}
+
+// FetchEmployees returns a map that contains the names as keys and their urnos as values
+func (c *Client) fetchEmployees() (map[string]int, error) {
+	ee := map[string]int{}
+	resp, err := c.Do("GET", "/staffs", http.NoBody, helper.Query{})
+	if err != nil {
+		return ee, err
+	}
+	var Employees struct {
+		EmployeeList []struct {
+			Urno      int    `json:"urno"`
+			Firstname string `json:"firstname"`
+			Lastname  string `json:"lastname"`
+		} `json:"person_list"`
+	}
+
+	bb, err := helper.ResponseBytes(resp)
+	if err != nil {
+		return ee, err
+	}
+	err = json.Unmarshal(bb, &Employees)
+	if err != nil {
+		return ee, err
+	}
+	for _, e := range Employees.EmployeeList {
+		ee[e.Firstname+" "+e.Lastname] = e.Urno
+	}
+	return ee, nil
+
+}
+
+// CreateTodo creates a new todo from todo in proad
+func (c *Client) CreateTodo(todo interface{}) error {
+	bb, err := json.Marshal(todo)
+	if err != nil {
+		return fmt.Errorf("unable to marshal todo: %s", err)
+	}
+	resp, err := c.Do("POST", "/tasks", bytes.NewBuffer(bb), helper.Query{})
+	if err != nil {
+		return fmt.Errorf("unable to send a post request: %s", err)
+	}
+
+	bb, err = helper.ResponseBytes(resp)
+	if err != nil {
+		return fmt.Errorf("unable to unmarshal response: %s", err)
+	}
+	err = helper.PrettyPrintBytes(bb)
+	if err != nil {
+		return fmt.Errorf("unable to print bytes: %s", err)
+	}
+	return nil
 }
 
 // FetchProject gets a proad project by projectnumber

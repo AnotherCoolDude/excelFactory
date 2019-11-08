@@ -30,9 +30,26 @@ type Todo struct {
 	Content               string        `json:"content"`
 	StartsOn              string        `json:"starts_on"`
 	DueOn                 string        `json:"due_on"`
-	Assignees             []interface{} `json:"assignees"`
+	Assignees             []Assignee    `json:"assignees"`
 	CompletionSubscribers []interface{} `json:"completion_subscribers"`
 	CompletionURL         string        `json:"completion_url"`
+}
+
+// Assignee represents a person, that is assigned to a todo
+type Assignee struct {
+	ID             int         `json:"id"`
+	AttachableSgid string      `json:"attachable_sgid"`
+	Name           string      `json:"name"`
+	EmailAddress   string      `json:"email_address"`
+	PersonableType string      `json:"personable_type"`
+	Title          string      `json:"title"`
+	Bio            interface{} `json:"bio"`
+	CreatedAt      time.Time   `json:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at"`
+	Admin          bool        `json:"admin"`
+	Owner          bool        `json:"owner"`
+	TimeZone       string      `json:"time_zone"`
+	AvatarURL      string      `json:"avatar_url"`
 }
 
 // Projectno returns the projectno of the todo
