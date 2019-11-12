@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/basecamp"
+	bcmodels "github.com/AnotherCoolDude/excelFactory/projecttransfer/basecamp/models"
+	"github.com/manifoldco/promptui"
+	"strings"
 
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/proad"
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/proad/models"
@@ -38,40 +41,39 @@ func transferAction(c *cli.Context) error {
 	}
 
 	initClients()
-
+	fmt.Println("fetching basecamp projects...")
 	pp, err := basecampclient.FetchProjects()
 	if err != nil {
 		return err
 	}
+	fmt.Println("fetching basecamp todos...")
 	for i := range pp {
 		err := basecampclient.FetchTodos(&pp[i])
 		if err != nil {
 			fmt.Printf("error fetching todos: %s\n", err)
 		}
-		fmt.Printf("project %d: %s\n", i, pp[i].Name)
-		for _, t := range pp[i].Todos {
-			if len(t.Assignees) > 0 {
-				fmt.Printf("\t%s\t%s\n", t.Title, t.Assignees[0].Name)
-			} else {
-				fmt.Printf("\t%s\n", t.Title)
-			}
-		}
 	}
+
+	idx, err := basecampSelection(pp)
+
+	if err != nil {
+		fmt.Printf("error occurred: %s", err)
+		os.Exit(1)
+	}
+	fmt.Printf("you choose %s\n", pp[idx].Name)
+
 	fmt.Println("checking for corresponding proad projects...")
-	proadpp := []models.Project{}
-	for i, p := range pp {
-		if p.Projectno() == "" {
-			continue
-		}
-		var project models.Project
-		proadclient.FetchProject(p.Projectno(), &project)
-		proadclient.FetchTodos(&project)
-		proadpp = append(proadpp, project)
-		fmt.Printf("project %d: %s\n", i, project.Projectno)
-		for _, t := range project.Todos {
-			fmt.Printf("\t%s\n", t.Shortinfo)
-		}
+
+	var project models.Project
+	proadclient.FetchProject(pp[idx].Projectno(), &project)
+	proadclient.FetchTodos(&project)
+	fmt.Printf("found project %s\nselect assignee\n", project.Projectno)
+	urno, err := employeeSelection(proadclient.Employees)
+	if err != nil {
+		fmt.Printf("error selecting employee: %s", err)
+		os.Exit(1)
 	}
+	fmt.Printf("you choose urno %d", urno)
 	// fmt.Println("attempt to create a new proad todo")
 	// todo := helper.CreateProadTodo(pp[1].Todos[0], proadpp[0], proadclient.ManagerUrno)
 	// err = proadclient.CreateTodo(todo)
@@ -98,4 +100,61 @@ func initClients() {
 		fmt.Printf("failed to authenticate basecamp client: %s", err)
 		os.Exit(1)
 	}
+}
+
+func basecampSelection(projects []bcmodels.Project) (int, error) {
+	tt := promptui.SelectTemplates{
+		Label:    "Choose a project",
+		Active:   `▸ {{ .Name | blue }}`,
+		Inactive: `{{ .Name | blue }}`,
+		Selected: `▸ {{ .Name | blue | cyan}}`,
+		Details: `{{ range .Todos }}
+		{{ .Title | blue }}{{ end }}`,
+	}
+
+	searcher := func(input string, index int) bool {
+		p := projects[index]
+		name := strings.Replace(strings.ToLower(p.Name), " ", "", -1)
+		input = strings.Replace(strings.ToLower(input), " ", "", -1)
+
+		return strings.Contains(name, input)
+	}
+
+	selection := promptui.Select{
+		Label:     "Select Project",
+		Items:     projects,
+		Templates: &tt,
+		Searcher:  searcher,
+	}
+
+	i, _, err := selection.Run()
+	return i, err
+}
+
+func employeeSelection(employees map[string]int) (int, error) {
+	names := []string{}
+	for e := range employees {
+		names = append(names, e)
+	}
+
+	searcher := func(input string, index int) bool {
+		for name := range employees {
+			return strings.Contains(strings.ToLower(name), strings.ToLower(input))
+		}
+		return false
+	}
+	selection := promptui.Select{
+		Label:             "Choose Assignee",
+		Items:             names,
+		Searcher:          searcher,
+		StartInSearchMode: true,
+	}
+	i, n, err := selection.Run()
+	for name, urno := range employees {
+		if n == name {
+			i = urno
+			fmt.Println(urno)
+		}
+	}
+	return i, err
 }
