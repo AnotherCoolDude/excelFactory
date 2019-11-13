@@ -1,9 +1,5 @@
 package models
 
-import (
-	"time"
-)
-
 // Todo wraps the proad response for todos in a struct
 type Todo struct {
 	Urno             int         `json:"urno"`
@@ -105,21 +101,12 @@ type Country struct {
 	Shortname   string `json:"shortname"`
 }
 
-// Timestamp is a identifier for comparing with other todos
-func (t Todo) Timestamp() string {
-	date, err := time.Parse(time.RFC3339, t.FromDatetime)
-	if err != nil {
-		panic(0)
-	}
-	return date.Format(time.RFC3339)
-}
-
-// Identifier returns a unique identifier
-func (t Todo) Identifier() int {
-	return t.Urno
-}
-
-// ClientType returns the type of Todo
-func (t Todo) ClientType() string {
-	return "proad"
+// PostTodo is a Todo that contains fields neccessary for creating a todo
+type PostTodo struct {
+	Shortinfo       string `json:"shortinfo"`
+	ProjectUrno     int    `json:"urno_project"`
+	ManagerUrno     int    `json:"urno_manager"`
+	ResponsibleUrno int    `json:"urno_responsible"`
+	FromDatetime    string `json:"from_datetime"`
+	UntilDatetime   string `json:"until_datetime"`
 }

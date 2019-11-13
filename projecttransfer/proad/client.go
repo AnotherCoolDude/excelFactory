@@ -129,8 +129,8 @@ func (c *Client) fetchEmployees() (map[string]int, error) {
 
 }
 
-// CreateTodo creates a new todo from todo in proad
-func (c *Client) CreateTodo(todo interface{}) error {
+// PostTodo creates a new todo in proad
+func (c *Client) PostTodo(todo models.PostTodo) error {
 	bb, err := json.Marshal(todo)
 	if err != nil {
 		return fmt.Errorf("unable to marshal todo: %s", err)
@@ -144,10 +144,24 @@ func (c *Client) CreateTodo(todo interface{}) error {
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal response: %s", err)
 	}
-	err = helper.PrettyPrintBytes(bb)
-	if err != nil {
-		return fmt.Errorf("unable to print bytes: %s", err)
+	var responseStruct struct {
+		Error string `json:"error"`
+		Urno  int    `json:"urno"`
 	}
+	err = json.Unmarshal(bb, &responseStruct)
+	if err != nil {
+		return fmt.Errorf("unable to unmarshal response: %s", err)
+	}
+	if responseStruct.Error != "" {
+		return fmt.Errorf("got error response posting todo: %s", responseStruct.Error)
+	}
+	assignee := ""
+	for n, u := range c.Employees {
+		if u == todo.ResponsibleUrno {
+			assignee = n
+		}
+	}
+	fmt.Printf("todo %s created with assignee %s (urno: %d)\n", todo.Shortinfo, assignee, responseStruct.Urno)
 	return nil
 }
 
