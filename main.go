@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
 	"os"
+
+	"github.com/urfave/cli"
 )
 
 func main() {
@@ -12,7 +13,7 @@ func main() {
 	app.Usage = "a library / cli tool to quickly read from and create excel files"
 	app.Version = "0.1.0"
 
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		orderbookCommand,
 		transferCommand,
 	}

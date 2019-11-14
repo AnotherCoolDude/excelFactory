@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/AnotherCoolDude/excelFactory/etats"
-	"github.com/AnotherCoolDude/excelFactory/excelfactory"
-	"github.com/urfave/cli"
 	"os"
 	"path"
 	"strconv"
+
+	"github.com/AnotherCoolDude/excelFactory/etats"
+	"github.com/AnotherCoolDude/excelFactory/excelfactory"
+	"github.com/urfave/cli"
 )
 
 // define name for resulting file
@@ -21,24 +22,24 @@ var (
 	rentpath string
 	jsonpath string
 	// define command to use in main.go
-	orderbookCommand = cli.Command{
+	orderbookCommand = &cli.Command{
 		Name:    "orderbook",
 		Aliases: []string{"ob"},
 		Usage:   "takes a rentabilität xlsx from proad and a etat json file and sorts it to fit into orderbooks",
 		Action:  orderbookAction,
 		Flags: []cli.Flag{
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:        "proad, p",
 				Usage:       "path to proad rentabilität xlsx file",
 				Destination: &rentpath,
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:        "etat, e",
 				Usage:       "path to etat json file",
 				Value:       "etats/etatdirector.json",
 				Destination: &jsonpath,
 			},
-			cli.BoolTFlag{
+			&cli.BoolFlag{
 				Name:        "header",
 				Usage:       "indicate wether the provided xlsx file has a header column, true by default",
 				Destination: &header,

@@ -2,18 +2,20 @@ package main
 
 import (
 	"fmt"
+	"path"
+	"strings"
+
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/basecamp"
 	bcmodels "github.com/AnotherCoolDude/excelFactory/projecttransfer/basecamp/models"
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/helper"
 	"github.com/manifoldco/promptui"
-	"path"
-	"strings"
+
+	"os"
 
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/proad"
 	"github.com/AnotherCoolDude/excelFactory/projecttransfer/proad/models"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli"
-	"os"
 )
 
 var (
@@ -21,13 +23,13 @@ var (
 	basecampclient *basecamp.Client
 	proadclient    *proad.Client
 
-	transferCommand = cli.Command{
+	transferCommand = &cli.Command{
 		Name:    "Transfer",
 		Aliases: []string{"t"},
 		Usage:   "Transfer transfers todos from basecamp to proad",
 		Action:  transferAction,
 		Flags: []cli.Flag{
-			cli.BoolFlag{
+			&cli.BoolFlag{
 				Name:        "list, l",
 				Usage:       "list all projects that can be transfered",
 				Destination: &list,
